@@ -84,7 +84,7 @@ def get_result(query:str,limit:int=5):
 
 async def process_handbook(file):
     try:
-        file_location=f"temp_files/{file.filename}"
+        file_location=f"backend/temp_files/{file.filename}"
         with open(file_location,"wb") as buffer:
             buffer.write(await file.read())
             
