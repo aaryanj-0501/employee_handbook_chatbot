@@ -1,0 +1,22 @@
+Kaggle_employee_handbook_dataset:https://www.kaggle.com/datasets/abhilashjash/us-employee-handbook-dataset
+LangChain:https://docs.langchain.com/oss/python/integrations/text_embedding
+LangChain:https://docs.langchain.com/oss/python/langchain/rag
+Qdrant:https://api.qdrant.tech/api-reference/collections/get-collection
+
+Challenges Faced:
+
+1.The embedding model was working slow
+Error identified: Model was loading multiple times affecting the speed to create vectors
+Solution:Model loaded only once
+
+2.Improper chunking led to wrong query scores and results
+Error identified:Fixed size chunking does not store proper context
+Solution: Switched to Recursive chunking that stores proper context
+
+3.Metadata filtering and retrieving
+Error identified:Improper filters generated and SelfQueryRetriever documentation not found properly
+Solution: Used llm to extract the metadata and Qdrant query to filter and retrieve the results
+
+4.Improper result from llm
+Error identified: Prompt template rules not setup properly
+Solution: Prompt template instructions added properly
