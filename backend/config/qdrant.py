@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 import logging
 
+logger=logging.getLogger(__name__)
 load_dotenv()
 qdrant_url = os.getenv('QDRANT_URL')
 qdrant_api_key = os.getenv('QDRANT_API_KEY')
@@ -45,6 +46,6 @@ for field in fields_to_index:
             field_name=field,
             field_schema=PayloadSchemaType.KEYWORD
         )
-        print("Indices created")
-print("Indices already created")
-logging.info(f"Qdrant collection '{COLLECTION_NAME}' is set up.")
+        logger.info("Indices created")
+logger.info("Indices already created")
+logger.info(f"Qdrant collection '{COLLECTION_NAME}' is set up.")

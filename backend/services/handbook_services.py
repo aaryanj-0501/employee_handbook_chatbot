@@ -40,24 +40,24 @@ def add_vectors(chunks:str):
                 }
             })
 
-        print(f"Chunk added:",len(points))
+        logger.info(f"Chunk added:",len(points))
         client.upsert(
             collection_name=collection_handbook,
             points=points
         )
-        print("Vectors added successfully.")
         logger.info("Vectors added successfully.")
     except Exception as e:
         logger.error(f"Error in add_vectors:{str(e)}",exc_info=True)
         raise
     
-def get_result(query:str,limit:int=5):
+async def get_result(query:str,limit:int=5):
     try:
         if not query or not query.strip():
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail="Query is empty")
         logger.info(f"Processing query with limit{limit}")
         query_result=get_query_retriever(query,limit)
 
+        logger.info(query_result)
         if not query_result or not query_result.get('results'):
             logger.warning(f"No result found")
             return{
@@ -88,7 +88,7 @@ async def process_handbook(file):
         with open(file_location,"wb") as buffer:
             buffer.write(await file.read())
             
-        print("File saved")
+        logger.info("File saved")
         logger.info(f"File saved successfully")
         text=pdf_loader.load_pdf(file_location)
 

@@ -35,7 +35,7 @@ async def upload_handbook(file: UploadFile = File(...),background_tasks: Backgro
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail=f"Error processing upload:{str(e)}")
 
 @router.post("/chat")
-def handbook_query(query:HandbookQuery, limit:int=5):
+async def handbook_query(query:HandbookQuery, limit:int=5):
     try:
         if not query.question or not query.question.strip():
             logger.error("Query is empty")
@@ -46,7 +46,7 @@ def handbook_query(query:HandbookQuery, limit:int=5):
             limit=5
         
         logger.info("Query recieved")
-        search_result=get_result(query.question,limit)
+        search_result=await get_result(query.question,limit)
         logger.info("Query processed sucessfully")
     
         return search_result

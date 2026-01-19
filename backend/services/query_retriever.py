@@ -5,6 +5,9 @@ from config.qdrant import client,COLLECTION_NAME as collection_handbook
 from utils.embeddings import get_embedding
 from utils.llm_setup import set_llm
 import json
+import logging
+
+logger=logging.getLogger(__name__)
 
 prompt=PromptTemplate(
     input_variables=["query"],
@@ -29,7 +32,7 @@ query_chain=LLMChain(llm=llm,prompt=prompt)
 
 def extract_metadata(query:str):
     response=query_chain.run(query)
-    print("Extracted Metadata:",response)
+    logger.info("Extracted Metadata:",response)
     return json.loads(response)
 
 def build_filter(metadata):
