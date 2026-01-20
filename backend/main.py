@@ -3,14 +3,21 @@ from routes.handbook_routes import router
 from starlette.middleware.cors import CORSMiddleware
 import logging
 from config.logging_config import setup_logging
+from contextlib import asynccontextmanager
 
-app=FastAPI(title="Employee Handbook Bot")
-
-@app.on_event("startup")
-def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    #Startup logic
     setup_logging()
     logger = logging.getLogger(__name__)
     logger.info("Starting Employee Handbook Chatbot")
+
+    yield
+
+    #Shutdown logic 
+    logger.info("Shutting down Employee Handbook Chatbot")
+
+app = FastAPI(title="Employee Handbook Bot",lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

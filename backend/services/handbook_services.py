@@ -54,7 +54,7 @@ async def get_result(query:str,limit:int=5):
     try:
         if not query or not query.strip():
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail="Query is empty")
-        logger.info(f"Processing query with limit{limit}")
+        logger.info(f"Processing query with limit {limit}")
         query_result=get_query_retriever(query,limit)
 
         logger.info(query_result)
@@ -74,7 +74,10 @@ async def get_result(query:str,limit:int=5):
             }
         
         logger.info("Generating answer using LLM chain")
-        response=answer_chain.run(question=query,context=context)
+        response = answer_chain.invoke({
+            "question": query,
+            "context": context
+        })
         return clean_output(response)
     except HTTPException:
         raise

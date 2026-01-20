@@ -1,5 +1,7 @@
 from langchain_core.prompts import PromptTemplate
 from langchain_classic.chains import LLMChain
+from langchain_core.runnables import RunnableSequence
+from langchain_core.output_parsers import JsonOutputParser
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 from config.qdrant import client,COLLECTION_NAME as collection_handbook
 from utils.embeddings import get_embedding
@@ -28,12 +30,12 @@ Do not add explanations OR introductory messages.
 Query:{query}"""
 )
 llm=set_llm("query")
-query_chain=LLMChain(llm=llm,prompt=prompt)
+query_chain=prompt | llm | JsonOutputParser()
 
 def extract_metadata(query:str):
-    response=query_chain.run(query)
-    logger.info("Extracted Metadata:",response)
-    return json.loads(response)
+    response=query_chain.invoke(query)
+    logger.info("Extracted Metadata: %s",response)
+    return response
 
 def build_filter(metadata):
     if not metadata:

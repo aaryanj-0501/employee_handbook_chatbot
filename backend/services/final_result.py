@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 from utils.llm_setup import set_llm
-from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnableSequence 
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_classic.chains import LLMChain
 
@@ -81,10 +82,7 @@ Answer:
 """)
 ])
 
-answer_chain=LLMChain(
-    llm=llm,
-    prompt=rag_prompt
-)
+answer_chain=rag_prompt | llm | StrOutputParser()
 
 def extract_context(query_result):
     if not isinstance(query_result, dict) or "results" not in query_result:

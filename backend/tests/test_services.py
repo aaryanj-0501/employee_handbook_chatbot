@@ -126,11 +126,12 @@ class TestFinalResult:
 class TestHandbookServices:
     """Test cases for handbook services"""
     
+    @pytest.mark.asyncio
     @patch("services.handbook_services.get_query_retriever")
     @patch("services.handbook_services.extract_context")
     @patch("services.handbook_services.answer_chain")
     @patch("services.handbook_services.clean_output")
-    def test_get_result_success(self, mock_clean, mock_chain, mock_extract, mock_retriever):
+    async def test_get_result_success(self, mock_clean, mock_chain, mock_extract, mock_retriever):
         """Test successful get_result"""
         # Setup mocks
         mock_retriever.return_value = {
@@ -139,32 +140,34 @@ class TestHandbookServices:
             ]
         }
         mock_extract.return_value = ["Context text"]
-        mock_chain.run.return_value = "This is the answer"
+        mock_chain.invoke.return_value = "This is the answer"
         mock_clean.return_value = ["Cleaned answer"]
         
-        result = get_result("What is the policy?", limit=5)
+        result = await get_result("What is the policy?", limit=5)
         
         assert isinstance(result, list)
         assert len(result) > 0
         mock_retriever.assert_called_once()
         mock_extract.assert_called_once()
-        mock_chain.run.assert_called_once()
+        mock_chain.invoke.assert_called_once()
         mock_clean.assert_called_once()
     
-    def test_get_result_empty_query(self):
+    @pytest.mark.asyncio
+    async def test_get_result_empty_query(self):
         """Test get_result with empty query"""
         # get_result catches ValueError and raises HTTPException
         with pytest.raises(HTTPException) as exc_info:
-            get_result("", limit=5)
+            await get_result("", limit=5)
         assert exc_info.value.status_code == 500
         assert "empty" in exc_info.value.detail.lower()
     
+    @pytest.mark.asyncio
     @patch("services.handbook_services.get_query_retriever")
-    def test_get_result_no_results(self, mock_retriever):
+    async def test_get_result_no_results(self, mock_retriever):
         """Test get_result when no results found"""
         mock_retriever.return_value = {"results": []}
         
-        result = get_result("What is the policy?", limit=5)
+        result = await get_result("What is the policy?", limit=5)
         
         assert isinstance(result, dict)
         assert "answer" in result
