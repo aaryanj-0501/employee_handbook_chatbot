@@ -12,6 +12,18 @@ def welcome():
     logger.info("Welcome test")
     return {"message":"Welcome to Employee Handbook Bot!"}
 
+#Health API
+@router.get("/health")
+def health_check():
+    logger.info("Health check ping received")
+    return {
+        "status":"OK",
+        "message":"Service is healthy",
+        "service":"Employee Handbook Bot"
+    }
+
+
+#Upload Handbook PDF 
 @router.post("/upload-handbook")
 async def upload_handbook(file: UploadFile = File(...),background_tasks: BackgroundTasks=None):
     try:
@@ -34,6 +46,8 @@ async def upload_handbook(file: UploadFile = File(...),background_tasks: Backgro
         logger.error(f"Error uploading handbook pdf:{str(e)}",exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,detail=f"Error processing upload:{str(e)}")
 
+
+#Query
 @router.post("/chat")
 async def handbook_query(query:HandbookQuery, limit:int=5):
     try:

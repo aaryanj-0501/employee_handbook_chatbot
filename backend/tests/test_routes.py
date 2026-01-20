@@ -42,7 +42,40 @@ class TestWelcomeEndpoint:
         assert "message" in response.json(), "Response should contain 'message' key"
         assert "Welcome to Employee Handbook Bot" in response.json()["message"], \
             "Message should contain welcome text"
+        
+    def test_welcome_endpoint_invalid_method(self):
+        """
+        Test the welcome endpoint fail for http method
 
+        ARRANGE: No setup needed
+        ACT: Make a POST request to the root path "/"
+        ASSERT: Check that we get a 405 Method not allowed
+        """
+
+        # ACT
+        response=client.post("/")
+
+        # ASSERT
+        assert response.status_code == 405
+        assert response.json()["detail"] == "Method Not Allowed"
+
+class TestHealthEndpoint:
+    def test_health_endpoint_success(self):
+        """
+        Test that health endpoint returns correct message
+        
+        Arrange: No setup
+        Act: Make a get request to the /health endpoint
+        Assert: Check hether the api returns a correct status code and message
+        """
+
+        # ACT
+        response=client.get("/health")
+
+        # ASSERT
+        assert response.status_code == 200
+        assert response.json()["status"] == "OK"
+        assert "Employee Handbook Bot" in response.json()["service"]
 
 class TestUploadHandbookEndpoint:
     """Test cases for the upload handbook endpoint"""
