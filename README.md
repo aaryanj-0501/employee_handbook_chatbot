@@ -209,8 +209,3 @@ backend/htmlcov/index.html
 
 **Aaryan Jadhav**
 Employee Handbook Automation | RAG Systems | LangChain | FastAPI | Qdrant | GenAI
-
----
-* 🌐 Make a **GitHub-friendly README with badges**
-
-Just tell me 👍
