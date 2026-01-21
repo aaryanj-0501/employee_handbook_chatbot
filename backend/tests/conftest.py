@@ -9,8 +9,16 @@ from pathlib import Path
 # Add parent directory to path to allow imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from auth.dependencies import get_current_user
+from main import app
+
 # Set test environment variables
 os.environ.setdefault("TESTING", "true")
+
+def override_get_current_user():
+    return {"username": "test-user", "role": "admin"}
+
+app.dependency_overrides[get_current_user] = override_get_current_user
 
 @pytest.fixture
 def sample_pdf_path():

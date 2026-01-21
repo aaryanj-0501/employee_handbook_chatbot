@@ -1,5 +1,6 @@
-from fastapi import APIRouter,UploadFile,File,BackgroundTasks,HTTPException,status
+from fastapi import APIRouter,UploadFile,File,BackgroundTasks,HTTPException,status,Depends
 from services.handbook_services import process_handbook,get_result
+from auth.dependencies import get_current_user
 from models.handbook_model import HandbookQuery  
 import logging
 
@@ -25,8 +26,13 @@ def health_check():
 
 #Upload Handbook PDF 
 @router.post("/upload-handbook")
-async def upload_handbook(file: UploadFile = File(...),background_tasks: BackgroundTasks=None):
+async def upload_handbook(
+    file: UploadFile = File(...),
+    background_tasks: BackgroundTasks=None,
+    current_user:dict=Depends(get_current_user)):
     try:
+        if current_user.get("role") != "admin":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="You do not have permission")
         logger.info(f"Upload request recieved for file:{file.filename}")
         if not file.filename:
             logger.error("No filename provided")
@@ -49,8 +55,14 @@ async def upload_handbook(file: UploadFile = File(...),background_tasks: Backgro
 
 #Query
 @router.post("/chat")
-async def handbook_query(query:HandbookQuery, limit:int=5):
+async def handbook_query(query:HandbookQuery, limit:int=5,current_user:dict=Depends(get_current_user)):
     try:
+        if current_user.get("role") not in {"admin", "employee", "intern"}:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to access the chat endpoint.",
+            )
+        
         if not query.question or not query.question.strip():
             logger.error("Query is empty")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Question is empty")

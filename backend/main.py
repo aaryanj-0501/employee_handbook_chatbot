@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from routes.handbook_routes import router
+from routes.auth_routes import router as auth_router
 from starlette.middleware.cors import CORSMiddleware
 import logging
 from config.logging_config import setup_logging
@@ -28,4 +29,5 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(auth_router)
 

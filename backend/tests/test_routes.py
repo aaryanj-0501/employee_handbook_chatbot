@@ -17,6 +17,11 @@ from main import app
 # Create a test client - this simulates making HTTP requests to our API
 client = TestClient(app)
 
+# Ensure dependency override is set
+from conftest import override_get_current_user
+from auth.dependencies import get_current_user
+app.dependency_overrides[get_current_user] = override_get_current_user
+
 
 class TestWelcomeEndpoint:
     """
@@ -98,10 +103,12 @@ class TestUploadHandbookEndpoint:
         
         # ARRANGE: Mock the processing functions so we don't actually process the PDF
         # This makes tests faster and more predictable
-        with patch("services.handbook_services.pdf_loader.load_pdf") as mock_load, \
+        with patch("routes.handbook_routes.get_current_user") as mock_user, \
+             patch("services.handbook_services.pdf_loader.load_pdf") as mock_load, \
              patch("services.handbook_services.chunk_text") as mock_chunk, \
              patch("services.handbook_services.add_vectors") as mock_add:
             
+            mock_user.return_value = {"username": "test", "role": "admin"}
             # Tell the mocks what to return (fake results)
             mock_load.return_value = "Sample text from PDF"
             mock_chunk.return_value = ["chunk1", "chunk2"]
@@ -120,7 +127,9 @@ class TestUploadHandbookEndpoint:
     def test_upload_handbook_invalid_format(self):
         """Test upload with non-PDF file"""
         files = {"file": ("test.txt", b"text content", "text/plain")}
-        response = client.post("/upload-handbook", files=files)
+        with patch("routes.handbook_routes.get_current_user") as mock_user:
+            mock_user.return_value = {"username": "test", "role": "admin"}
+            response = client.post("/upload-handbook", files=files)
         
         assert response.status_code == 400
         assert "PDF" in response.json()["detail"]
@@ -150,7 +159,9 @@ class TestChatEndpoint:
         query_data = {"question": "What is the leave policy?"}
         
         # ARRANGE: Mock the get_result function (don't actually call it)
-        with patch("routes.handbook_routes.get_result") as mock_get_result:
+        with patch("routes.handbook_routes.get_current_user") as mock_user, \
+             patch("routes.handbook_routes.get_result") as mock_get_result:
+            mock_user.return_value = {"username": "test", "role": "employee"}
             # Tell the mock what to return (fake answer)
             mock_get_result.return_value = ["Employees are entitled to 20 days of leave per year."]
             
@@ -164,7 +175,9 @@ class TestChatEndpoint:
     def test_chat_endpoint_empty_question(self):
         """Test chat with empty question"""
         query_data = {"question": ""}
-        response = client.post("/chat", json=query_data)
+        with patch("routes.handbook_routes.get_current_user") as mock_user:
+            mock_user.return_value = {"username": "test", "role": "employee"}
+            response = client.post("/chat", json=query_data)
         
         assert response.status_code == 400
         assert "empty" in response.json()["detail"].lower()
