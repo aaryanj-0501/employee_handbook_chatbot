@@ -10,15 +10,18 @@ These are the functions that do the actual work:
 """
 import pytest
 from unittest.mock import Mock, patch, MagicMock
+from conftest import sample_query_result,sample_query_data
 from services.generate_metadata import (
     infer_policy_type,
     infer_section,
     infer_location,
     infer_employee_type
 )
+from services.query_retriever import extract_metadata,build_filter,get_query_retriever
 from services.final_result import extract_context, clean_output
-from services.handbook_services import get_result
+from services.handbook_services import add_vectors, get_result
 from fastapi import HTTPException
+from qdrant_client.models import Filter
 
 
 class TestGenerateMetadata:
@@ -172,3 +175,199 @@ class TestHandbookServices:
         assert isinstance(result, dict)
         assert "answer" in result
         assert "sources" in result
+
+    @pytest.mark.asyncio
+    @patch("services.handbook_services.extract_context")
+    @patch("services.handbook_services.get_query_retriever")
+    async def test_get_result_no_context(
+        self,
+        mock_get_query_retriever,
+        mock_extract_context,
+    ):
+        # ARRANGE
+        query = "What are working hours?"
+
+        mock_get_query_retriever.return_value = {
+            "results": [
+                {"text": "Some irrelevant chunk"}
+            ]
+        }
+        mock_extract_context.return_value = None  # <- triggers `if not context`
+
+        # ACT
+        result = await get_result(query)
+
+        # ASSERT
+        assert result == {
+            "answer": "According to the employee handbook this information is not specified.",
+            "sources": []
+        }
+
+        mock_get_query_retriever.assert_called_once_with(query, 5)
+        mock_extract_context.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("services.handbook_services.get_query_retriever")
+    async def test_get_result_internal_exception(self,mock_get_query_retriever):
+        # ARRANGE
+        query = "What is leave policy?"
+
+        mock_get_query_retriever.side_effect = Exception("DB failure")
+
+        # ACT + ASSERT
+        with pytest.raises(HTTPException) as exc_info:
+            await get_result(query)
+
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "Failed to process query"
+
+        mock_get_query_retriever.assert_called_once_with(query, 5)
+
+
+    @patch("services.handbook_services.client")
+    @patch("services.handbook_services.uuid.uuid4")
+    @patch("services.handbook_services.infer_employee_type")
+    @patch("services.handbook_services.infer_location")
+    @patch("services.handbook_services.infer_section")
+    @patch("services.handbook_services.infer_policy_type")
+    @patch("services.handbook_services.get_embedding")
+    @patch("services.handbook_services.clean_text")
+    def test_add_vectors_success(self,
+        mock_clean_text,
+        mock_get_embedding,
+        mock_infer_policy,
+        mock_infer_section,
+        mock_infer_location,
+        mock_infer_employee,
+        mock_uuid,
+        mock_client,
+    ):
+        # ARRANGE
+        chunks = ["Leave policy text", "WFH policy text"]
+
+        mock_clean_text.side_effect = lambda x: x
+        mock_get_embedding.return_value = [0.1, 0.2, 0.3]
+        mock_infer_policy.return_value = "Leave"
+        mock_infer_section.return_value = "Policies"
+        mock_infer_location.return_value = "General"
+        mock_infer_employee.return_value = "Full-Time"
+        mock_uuid.return_value = "test-uuid"
+
+        # ACT
+        add_vectors(chunks)
+
+        # ASSERT
+        mock_client.upsert.assert_called_once()
+
+        args, kwargs = mock_client.upsert.call_args
+        points = kwargs["points"]
+
+        assert len(points) == 2
+        assert points[0]["id"] == "test-uuid"
+        assert points[0]["vector"] == [0.1, 0.2, 0.3]
+        assert points[0]["payload"]["text"] == "Leave policy text"
+        assert points[0]["payload"]["policy_type"] == "Leave"
+
+    @patch("services.handbook_services.client")
+    def test_add_vectors_empty_chunks(self,mock_client):
+        # ARRANGE
+        chunks = []
+
+        # ACT + ASSERT
+        with pytest.raises(ValueError, match="No chunks to process"):
+            add_vectors(chunks)
+
+        mock_client.upsert.assert_not_called()
+
+    @patch("services.handbook_services.client")
+    def test_add_vectors_none_chunks(self,mock_client):
+        with pytest.raises(ValueError):
+            add_vectors(None)
+
+        mock_client.upsert.assert_not_called()
+
+class TestQueryRetriever:
+    @patch("services.query_retriever.query_chain")
+    def test_extract_metadata(self,mock_query_chain):
+        """Test extract metadata success"""
+        mock_query_chain.invoke.return_value={"policy_type":"Leave","section":"Policies","location":"General","employee_type":"General"}
+
+        metadata=extract_metadata(sample_query_data)
+
+        assert isinstance(metadata, dict)
+        assert all(key in metadata 
+                   for key in ["policy_type", "section", "location", "employee_type"])
+        mock_query_chain.invoke.assert_called_once()
+
+    def test_build_filter_success(self):
+        # ARRANGE
+        metadata = {
+            "policy_type": "Leave",
+            "section": "Policies",
+            "location": "General",
+            "employee_type": "General",
+        }
+
+        # ACT
+        filter_obj = build_filter(metadata)
+
+        # ASSERT
+        assert isinstance(filter_obj, Filter)
+        assert filter_obj.should is not None
+        assert len(filter_obj.should) == len(metadata)
+
+    def test_build_filter_none(self):
+        # ACT
+        result = build_filter(None)
+
+        # ASSERT
+        assert result is None
+
+    @patch("services.query_retriever.get_embedding")
+    @patch("services.query_retriever.client")
+    @patch("services.query_retriever.extract_metadata")
+    def test_get_query_retriever(
+        self,
+        mock_extract_metadata,
+        mock_client,
+        mock_get_embedding
+    ):
+        # ARRANGE
+        query = "What is the leave policy?"
+        fake_embedding = [0.1, 0.2, 0.3]
+
+        mock_extract_metadata.return_value = {
+            "policy_type": "Leave",
+            "section": "Policies",
+            "location": "General",
+            "employee_type": "General"
+        }
+
+        mock_get_embedding.return_value = fake_embedding
+
+        # fake Qdrant response
+        mock_point = MagicMock()
+        mock_point.id = "123"
+        mock_point.score = 0.95
+        mock_point.payload = {"text": "Leave policy content"}
+
+        mock_search_result = MagicMock()
+        mock_search_result.points = [mock_point]
+
+        mock_client.query_points.return_value = mock_search_result
+
+        # ACT
+        result = get_query_retriever(query, limit=5)
+
+        # ASSERT
+        assert result["query"] == query
+        assert len(result["results"]) == 1
+
+        item = result["results"][0]
+        assert item["id"] == "123"
+        assert item["score"] == 0.95
+        assert item["payload"]["text"] == "Leave policy content"
+
+        mock_extract_metadata.assert_called_once_with(query)
+        mock_get_embedding.assert_called_once_with(query)
+        mock_client.query_points.assert_called_once()

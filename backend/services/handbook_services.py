@@ -40,7 +40,7 @@ def add_vectors(chunks:str):
                 }
             })
 
-        logger.info(f"Chunk added:",len(points))
+        logger.info(f"Chunk added: len(points)")
         client.upsert(
             collection_name=collection_handbook,
             points=points
@@ -67,7 +67,7 @@ async def get_result(query:str,limit:int=5):
         context=extract_context(query_result)
 
         if not context:
-            logger.warning(f"No context extracted")
+            logger.info(f"No context extracted")
             return{
                 "answer":"According to the employee handbook this information is not specified.",
                 "sources":[]

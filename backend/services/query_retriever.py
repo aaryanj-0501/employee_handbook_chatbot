@@ -72,7 +72,7 @@ def extract_metadata(query:str):
     logger.info("Extracted Metadata: %s",response)
     return response
 
-def build_filter(metadata):
+def build_filter(metadata:dict):
     if not metadata:
         return None
     
