@@ -19,11 +19,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     Excludes health check and root endpoints from rate limiting.
     """
 
-    def __init__(self, app, exclude_paths: list = None):
+    def __init__(self, app, limiter=None, exclude_paths: list = None):
         super().__init__(app)
         self.exclude_paths = exclude_paths or ["/health", "/", "/docs", "/openapi.json", "/redoc"]
         self.config = get_ip_rate_limit_config()
-        self.limiter = get_rate_limiter()
+        self.limiter = limiter or get_rate_limiter()
 
     async def dispatch(self, request: Request, call_next):
         # Skip rate limiting for excluded paths
@@ -40,7 +40,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
 
         if not allowed:
-            logger.warning(f"Global rate limit exceeded for IP: {client_ip}")
+            logger.info(f"Global rate limit exceeded for IP: {client_ip}")
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Too many requests. Please try again later.",

@@ -1,10 +1,14 @@
+import time
+from utils.rate_limiter import get_rate_limiter
 from utils.pdf_loader import load_pdf
 from utils.chunker import chunk_text,clean_text
 from utils.embeddings import get_embedding
 from utils.llm_setup import set_llm
 import pytest
-from unittest.mock import patch
-from conftest import sample_pdf_path
+from fastapi import status,FastAPI
+from fastapi.testclient import TestClient
+from unittest.mock import MagicMock, patch
+from middleware.rate_limit_middleware import RateLimitMiddleware
 
 class TestPdfLoader:
     def test_pdf_loader_success(self,sample_pdf_path):
@@ -115,4 +119,135 @@ class TestLLMSetup:
         # ASSERT
         assert llm is not None
 
+class TestRateLimiter:
+    def test_clean_old_enteries_success(self):
+        # ARRANGE
+        limiter=get_rate_limiter()
+        now=time.time()
+        limiter._storage["test"]["test"]=[now-11]
 
+        # ACT
+        limiter._cleanup_old_entries(identifier="test",window="test",window_seconds=10)
+
+        # ASSERT
+        assert limiter._storage["test"]["test"]==[]
+
+    def test_check_rate_limit_allows_first_request(self):
+        limiter = get_rate_limiter()
+        limiter.reset()
+
+        allowed, retry_after = limiter.check_rate_limit(
+            identifier="user1",
+            limit=5,
+            window_seconds=10,
+            window_name="default"
+        )
+
+        assert allowed is True
+        assert retry_after is None
+
+    def test_check_rate_limit_allows_under_limit(self):
+        limiter = get_rate_limiter()
+        limiter.reset()
+
+        for _ in range(3):
+            allowed, _ = limiter.check_rate_limit("user1", 5, 10)
+
+        assert allowed is True
+
+    def test_check_rate_limit_blocks_when_limit_exceeded(self):
+        limiter = get_rate_limiter()
+        limiter.reset()
+
+        for _ in range(3):
+            limiter.check_rate_limit("user1", 3, 10)
+
+        allowed, retry_after = limiter.check_rate_limit("user1", 3, 10)
+
+        assert allowed is False
+        assert retry_after is not None
+        assert retry_after >= 1
+
+    def test_check_multiple_limits_all_allowed(self):
+        limiter = get_rate_limiter()
+        limiter.reset()
+
+        limits = {
+            "per_minute": (5, 60),
+            "per_hour": (100, 3600)
+        }
+
+        allowed, retry_after, violated = limiter.check_multiple_limits("user1", limits)
+
+        assert allowed is True
+        assert retry_after is None
+        assert violated is None
+
+    def test_check_multiple_limits_blocks_on_violation(self):
+        limiter = get_rate_limiter()
+        limiter.reset()
+
+        for _ in range(2):
+            limiter.check_rate_limit("user1", 2, 60, "per_minute")
+
+        limits = {
+            "per_minute": (2, 60),
+            "per_hour": (100, 3600)
+        }
+
+        allowed, retry_after, violated = limiter.check_multiple_limits("user1", limits)
+
+        assert allowed is False
+        assert retry_after is not None
+        assert violated == "per_minute"
+        
+    def test_reset_all_identifiers(self):
+        limiter = get_rate_limiter()
+        limiter.reset()
+
+        limiter.check_rate_limit("user1", 5, 10)
+        limiter.check_rate_limit("user2", 5, 10)
+
+        limiter.reset()
+
+        assert limiter._storage == {}
+
+def create_test_app():
+        app = FastAPI()
+
+        @app.get("/test")
+        async def test_endpoint():
+            return {"message": "OK"}
+
+        @app.get("/health")
+        async def health():
+            return {"status": "healthy"}
+
+        return app
+
+class TestRateMiddleware:
+
+    def test_excluded_path_skips_rate_limiting(self):
+        app=create_test_app()
+        app.add_middleware(RateLimitMiddleware)
+        client=TestClient(app)
+
+        response = client.get("/health")
+
+        assert response.status_code == 200
+        assert response.json() == {"status": "healthy"}
+
+    def test_rate_limit_allowed(self):
+        mock_limiter = MagicMock()
+        mock_limiter.check_rate_limit.return_value = (True, None)
+
+        app = create_test_app()
+        middleware = RateLimitMiddleware(app, limiter=mock_limiter)
+        client = TestClient(middleware)
+
+        response = client.get("/test")
+
+        assert response.status_code == 200
+        assert response.json() == {"message": "OK"}
+
+        mock_limiter.check_rate_limit.assert_called_once()

@@ -16,24 +16,24 @@ def get_rate_limit_config()-> Dict[str,Dict[str,int]]:
     return{
         "admin":{
             "chat":{
-                "per_minute":int(os.getenv("RATE_LIMIT","20")),
-                "per_hour":int(os.getenv("RATE_LIMIT","100")),
+                "per_minute":int(os.getenv("RATE_LIMIT_CHAT_PER_MIN_ADMIN","20")),
+                "per_hour":int(os.getenv("RATE_LIMIT_CHAT_PER_HOUR_ADMIN","100")),
             },
             "upload":{
-                "per_hour":int(os.getenv("RATE_LIMIT","5")),
-                "per_day":int(os.getenv("RATE_LIMIT","20")),
+                "per_hour":int(os.getenv("RATE_LIMIT_UPLOAD_PER_HOUR_ADMIN","5")),
+                "per_day":int(os.getenv("RATE_LIMIT_UPLOAD_PER_DAY_ADMIN","20")),
             }
         },
         "employee":{
             "chat":{
-                "per_minute":int(os.getenv("RATE_LIMIT","10")),
-                "per_hour":int(os.getenv("RATE_LIMIT","50")),
+                "per_minute":int(os.getenv("RATE_LIMIT_CHAT_PER_MIN_EMPLOYEE","10")),
+                "per_hour":int(os.getenv("RATE_LIMIT_CHAT_PER_HOUR_EMPLOYEE","50")),
             }
         },
         "intern":{
             "chat":{
-                "per_minute":int(os.getenv("RATE_LIMIT","50")),
-                "per_hour":int(os.getenv("RATE_LIMIT","30")), 
+                "per_minute":int(os.getenv("RATE_LIMIT_CHAT_PER_MIN_INTERN","50")),
+                "per_hour":int(os.getenv("RATE_LIMIT_CHAT_PER_HOUR_INTERN","30")), 
             }
         }
     }
