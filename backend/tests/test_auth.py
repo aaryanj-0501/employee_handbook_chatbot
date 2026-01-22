@@ -6,11 +6,6 @@ from auth.jwt_handler import create_access_token,verify_access_token
 from auth.dependencies import get_current_user
 from main import app
 
-def override_get_current_user():
-    return {"username": "test-user"}
-
-app.dependency_overrides[get_current_user] = override_get_current_user
-
 class TestAuth:
     def test_login_success(self):
         """Test to check login success"""

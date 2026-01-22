@@ -17,11 +17,11 @@ from main import app
 # Create a test client - this simulates making HTTP requests to our API
 client = TestClient(app)
 
-# Ensure dependency override is set
-from conftest import override_get_current_user
+"""Ensure dependency override is set
+from conftest import client
 from auth.dependencies import get_current_user
-app.dependency_overrides[get_current_user] = override_get_current_user
-
+app.dependency_overrides[get_current_user] = client.override_get_current_user()
+"""
 
 class TestWelcomeEndpoint:
     """
@@ -84,8 +84,11 @@ class TestHealthEndpoint:
 
 class TestUploadHandbookEndpoint:
     """Test cases for the upload handbook endpoint"""
-    
-    def test_upload_handbook_success(self):
+
+    @patch("services.handbook_services.pdf_loader")
+    @patch("services.handbook_services.chunk_text") 
+    @patch("services.handbook_services.add_vectors")
+    def test_upload_handbook_success(self,mock_load,mock_chunk,mock_add,client):
         """
         Test successful PDF upload
         
@@ -100,41 +103,31 @@ class TestUploadHandbookEndpoint:
         # ARRANGE: Create minimal valid PDF content (just enough to pass validation)
         pdf_content = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\nxref\n0 0\ntrailer\n<<\n/Root 1 0 R\n>>\n%%EOF"
         files = {"file": ("test_handbook.pdf", pdf_content, "application/pdf")}
+           
+        # Tell the mocks what to return (fake results)
+        mock_load.load_pdf.return_value = "Sample text from PDF"
+        mock_chunk.return_value = ["chunk1", "chunk2"]
+        mock_add.return_value = None
         
-        # ARRANGE: Mock the processing functions so we don't actually process the PDF
-        # This makes tests faster and more predictable
-        with patch("routes.handbook_routes.get_current_user") as mock_user, \
-             patch("services.handbook_services.pdf_loader.load_pdf") as mock_load, \
-             patch("services.handbook_services.chunk_text") as mock_chunk, \
-             patch("services.handbook_services.add_vectors") as mock_add:
-            
-            mock_user.return_value = {"username": "test", "role": "admin"}
-            # Tell the mocks what to return (fake results)
-            mock_load.return_value = "Sample text from PDF"
-            mock_chunk.return_value = ["chunk1", "chunk2"]
-            mock_add.return_value = None
-            
-            # ACT: Make the upload request
-            response = client.post("/upload-handbook", files=files)
-            
-            # ASSERT: Check that upload was accepted
-            assert response.status_code == 200, "Should return success status"
-            assert "status" in response.json(), "Response should have status field"
-            status_text = response.json()["status"].lower()
-            assert "uploaded" in status_text or "processing" in status_text, \
-                "Status should indicate upload/processing started"
+        # ACT: Make the upload request
+        response = client.post("/upload-handbook", files=files)
+        
+        # ASSERT: Check that upload was accepted
+        assert response.status_code == 200, "Should return success status"
+        assert "status" in response.json(), "Response should have status field"
+        status_text = response.json()["status"].lower()
+        assert "uploaded" in status_text or "processing" in status_text, \
+            "Status should indicate upload/processing started"
     
-    def test_upload_handbook_invalid_format(self):
+    def test_upload_handbook_invalid_format(self,client):
         """Test upload with non-PDF file"""
         files = {"file": ("test.txt", b"text content", "text/plain")}
-        with patch("routes.handbook_routes.get_current_user") as mock_user:
-            mock_user.return_value = {"username": "test", "role": "admin"}
-            response = client.post("/upload-handbook", files=files)
+        response = client.post("/upload-handbook", files=files)
         
         assert response.status_code == 400
         assert "PDF" in response.json()["detail"]
     
-    def test_upload_handbook_missing_file(self):
+    def test_upload_handbook_missing_file(self,client):
         """Test upload without file"""
         response = client.post("/upload-handbook")
         
@@ -144,7 +137,8 @@ class TestUploadHandbookEndpoint:
 class TestChatEndpoint:
     """Test cases for the chat endpoint"""
     
-    def test_chat_endpoint_success(self):
+    @patch("routes.handbook_routes.get_result")
+    def test_chat_endpoint_success(self,mock_get_result,client):
         """
         Test successful chat query
         
@@ -157,32 +151,26 @@ class TestChatEndpoint:
         """
         # ARRANGE: Prepare the question data
         query_data = {"question": "What is the leave policy?"}
+
+        # Tell the mock what to return (fake answer)
+        mock_get_result.return_value = ["Employees are entitled to 20 days of leave per year."]
         
-        # ARRANGE: Mock the get_result function (don't actually call it)
-        with patch("routes.handbook_routes.get_current_user") as mock_user, \
-             patch("routes.handbook_routes.get_result") as mock_get_result:
-            mock_user.return_value = {"username": "test", "role": "employee"}
-            # Tell the mock what to return (fake answer)
-            mock_get_result.return_value = ["Employees are entitled to 20 days of leave per year."]
-            
-            # ACT: Make the POST request to /chat endpoint
-            response = client.post("/chat?limit=5", json=query_data)
-            
-            # ASSERT: Check the response
-            assert response.status_code == 200, "Should return success status"
-            assert isinstance(response.json(), list), "Response should be a list of answer lines"
+        # ACT: Make the POST request to /chat endpoint
+        response = client.post("/chat?limit=5", json=query_data)
+        
+        # ASSERT: Check the response
+        assert response.status_code == 200, "Should return success status"
+        assert isinstance(response.json(), list), "Response should be a list of answer lines"
     
-    def test_chat_endpoint_empty_question(self):
+    def test_chat_endpoint_empty_question(self,client):
         """Test chat with empty question"""
         query_data = {"question": ""}
-        with patch("routes.handbook_routes.get_current_user") as mock_user:
-            mock_user.return_value = {"username": "test", "role": "employee"}
-            response = client.post("/chat", json=query_data)
+        response = client.post("/chat", json=query_data)
         
         assert response.status_code == 400
         assert "empty" in response.json()["detail"].lower()
     
-    def test_chat_endpoint_missing_question(self):
+    def test_chat_endpoint_missing_question(self,client):
         """Test chat without question field"""
         response = client.post("/chat", json={})
         

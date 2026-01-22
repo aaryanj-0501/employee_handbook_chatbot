@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from routes.handbook_routes import router
 from routes.auth_routes import router as auth_router
 from starlette.middleware.cors import CORSMiddleware
+from middleware.rate_limit_middleware import RateLimitMiddleware
 import logging
 from config.logging_config import setup_logging
 from contextlib import asynccontextmanager
@@ -19,6 +20,8 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Employee Handbook Chatbot")
 
 app = FastAPI(title="Employee Handbook Bot",lifespan=lifespan)
+
+app.add_middleware(RateLimitMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

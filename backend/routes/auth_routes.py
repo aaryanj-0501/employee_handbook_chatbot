@@ -1,8 +1,10 @@
 from datetime import timedelta
 from typing import Dict
-from fastapi import APIRouter,HTTPException,status,Depends
+from fastapi import APIRouter,HTTPException,status,Depends,Request
 from fastapi.security import OAuth2PasswordRequestForm
 from auth.jwt_handler import create_access_token
+from auth.dependencies import rate_limit_ip
+from config.rate_limit_config import get_ip_rate_limit_config
 
 router=APIRouter()
 
@@ -13,12 +15,15 @@ MOCK_USERS: Dict[str, Dict[str,str]]={
     "intern":{"password":"intern123","role":"intern","department":"Finance"}
 }
 
+_ip_config=get_ip_rate_limit_config()
+_login_rate_limit=rate_limit_ip("login",_ip_config["login_per_15min"],_ip_config["login_per_15min"])
+
 @router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm=Depends()):
+async def login(form_data: OAuth2PasswordRequestForm=Depends(),_:None=Depends(_login_rate_limit)):
     """
     Docstring for login
     
-    :param form_data: Description
+    :param form_data: username and password
     :type form_data: OAuth2PasswordRequestForm
     """
     if form_data is None:

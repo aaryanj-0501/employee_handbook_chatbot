@@ -21,10 +21,11 @@ Strictly allowed metadata fields and values:
 -employee_type: Full-Time, Part-Time, Contractor, Intern, General
 
 Rules:
+- Do NOT add any text except the JSON Output
 - Each of the 4 metadata fields MUST be present
 - If a field is not explicitly mentioned, set it to "General"
 - Return ONLY valid JSON with exactly 4 key:value pairs
-- Do NOT add explanations or extra text
+
 """
     ),
     (

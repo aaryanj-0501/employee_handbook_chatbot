@@ -1,6 +1,7 @@
 """
 Pytest configuration and fixtures
 """
+from fastapi.testclient import TestClient
 import pytest
 import os
 import sys
@@ -15,10 +16,21 @@ from main import app
 # Set test environment variables
 os.environ.setdefault("TESTING", "true")
 
-def override_get_current_user():
-    return {"username": "test-user", "role": "admin"}
+@pytest.fixture
+def client():
+    def override_get_current_user():
+        return {
+            "username": "admin",
+            "role": "admin",      # required for upload
+            "user_id": "admin123"  # REQUIRED for rate limiting
+        }
 
-app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    with TestClient(app) as client:
+        yield client
+
+    app.dependency_overrides.clear()
 
 @pytest.fixture
 def sample_pdf_path():
