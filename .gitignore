@@ -13,3 +13,8 @@ __pycache__
 htmlcov
 
 .coverage
+
+requirements.txt
+.DS_Store
+.vscode/
+.streamlit/secret.toml

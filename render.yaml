@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: employee-handbook-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_COLLECTION
+        value: employee_handbook
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: CHAT_MODEL_NAME
+        sync: false
+      - key: ANSWER_MODEL
+        sync: false
+      - key: EMBED_MODEL_NAME
+        value: sentence-transformers/all-MiniLM-L6-v2
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: OLLAMA_BASE_URL
+        sync: false
+      - key: OLLAMA_API_KEY
+        sync: false
+
+  - type: web
+    name: employee-handbook-frontend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r frontend/requirements.txt
+    startCommand: cd frontend && streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: API_BASE_URL
+        fromService:
+          type: web
+          name: employee-handbook-backend
+          property: url

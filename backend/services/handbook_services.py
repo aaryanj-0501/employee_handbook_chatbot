@@ -57,7 +57,7 @@ async def get_result(query:str,limit:int=5):
         logger.info(f"Processing query with limit {limit}")
         query_result=get_query_retriever(query,limit)
 
-        logger.info(query_result)
+        logger.info("Retrieved Query")
         if not query_result or not query_result.get('results'):
             logger.warning(f"No result found")
             return{

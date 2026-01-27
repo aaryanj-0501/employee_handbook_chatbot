@@ -47,6 +47,14 @@ st.markdown("""
         color: white;
         font-weight: bold;
     }
+    .login-container {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 2rem;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -55,10 +63,23 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "upload_status" not in st.session_state:
     st.session_state.upload_status = None
+if "access_token" not in st.session_state:
+    st.session_state.access_token = None
+if "is_authenticated" not in st.session_state:
+    st.session_state.is_authenticated = False
+if "login_error" not in st.session_state:
+    st.session_state.login_error = None
 
 def get_api_url():
     """Get the current API URL from session state or default"""
     return st.session_state.get("api_url", API_BASE_URL)
+
+def get_auth_headers():
+    """Get authorization headers with token if available"""
+    headers = {}
+    if st.session_state.get("access_token"):
+        headers["Authorization"] = f"Bearer {st.session_state.access_token}"
+    return headers
 
 def check_api_connection():
     """Check if API is available"""
@@ -69,18 +90,61 @@ def check_api_connection():
     except:
         return False
 
+def login(username: str, password: str):
+    """Login user and store token"""
+    try:
+        api_url = get_api_url()
+        # OAuth2PasswordRequestForm expects form data
+        data = {
+            "username": username,
+            "password": password
+        }
+        response = requests.post(
+            f"{api_url}/login",
+            data=data,
+            timeout=10
+        )
+        if response.status_code == 200:
+            token_data = response.json()
+            st.session_state.access_token = token_data.get("access_token")
+            st.session_state.is_authenticated = True
+            st.session_state.login_error = None
+            return True, "Login successful!"
+        else:
+            error_detail = response.json().get('detail', 'Login failed')
+            st.session_state.login_error = error_detail
+            return False, error_detail
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Connection error: {str(e)}"
+        st.session_state.login_error = error_msg
+        return False, error_msg
+
+def logout():
+    """Logout user and clear session"""
+    st.session_state.access_token = None
+    st.session_state.is_authenticated = False
+    st.session_state.login_error = None
+    st.session_state.messages = []
+    st.session_state.upload_status = None
+
 def upload_handbook(file):
     """Upload handbook PDF to API"""
     try:
         api_url = get_api_url()
         files = {"file": (file.name, file.getvalue(), "application/pdf")}
+        headers = get_auth_headers()
         response = requests.post(
             f"{api_url}/upload-handbook",
             files=files,
+            headers=headers,
             timeout=30
         )
         if response.status_code == 200:
             return True, "Handbook uploaded successfully! Processing in background..."
+        elif response.status_code == 401:
+            # Token expired or invalid
+            logout()
+            return False, "Session expired. Please login again."
         else:
             return False, f"Error: {response.json().get('detail', 'Unknown error')}"
     except requests.exceptions.RequestException as e:
@@ -101,15 +165,21 @@ def query_handbook(question: str, limit: int = 5, timeout: int = 120):
         
         payload = {"question": question}
         params = {"limit": limit}
+        headers = get_auth_headers()
         response = requests.post(
             f"{api_url}/chat",
             json=payload,
             params=params,
+            headers=headers,
             timeout=timeout
         )
         if response.status_code == 200:
             data = response.json()
             return True, data
+        elif response.status_code == 401:
+            # Token expired or invalid
+            logout()
+            return False, "Session expired. Please login again."
         else:
             error_detail = "Unknown error"
             try:
@@ -124,24 +194,52 @@ def query_handbook(question: str, limit: int = 5, timeout: int = 120):
     except requests.exceptions.RequestException as e:
         return False, f"Request error: {str(e)}"
 
+# Login Modal - Show if not authenticated
+if not st.session_state.is_authenticated:
+    # Center the login form
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        st.markdown('<h1 style="text-align: center; color: #1f77b4;">📚 Employee Handbook Bot</h1>', unsafe_allow_html=True)
+        st.markdown('<h2 style="text-align: center; margin-bottom: 2rem;">Login Required</h2>', unsafe_allow_html=True)
+        
+        # Display login error if any
+        if st.session_state.login_error:
+            st.error(f"❌ {st.session_state.login_error}")
+        
+        # Login form
+        with st.form("login_form"):
+            username = st.text_input("Username", placeholder="Enter your username")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            submit_button = st.form_submit_button("Login", type="primary", use_container_width=True)
+            
+            if submit_button:
+                if username and password:
+                    with st.spinner("Logging in..."):
+                        success, message = login(username, password)
+                        if success:
+                            st.success(message)
+                            st.rerun()
+                        else:
+                            st.error(message)
+                else:
+                    st.warning("Please enter both username and password")
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Stop execution here - don't show main page
+    st.stop()
+
+# Main application - only shown after authentication
 # Sidebar for configuration
 with st.sidebar:
-    st.header("⚙️ Configuration")
-    
-    # API URL input
-    if "api_url" not in st.session_state:
-        st.session_state.api_url = API_BASE_URL
-    
-    api_url = st.text_input(
-        "API Base URL",
-        value=st.session_state.api_url,
-        help="Enter the base URL of your FastAPI server"
-    )
-    if api_url != st.session_state.api_url:
-        st.session_state.api_url = api_url
-        API_BASE_URL = api_url
+    # Logout button at the top
+    if st.button("🚪 Logout", use_container_width=True):
+        logout()
+        st.rerun()
     
     st.divider()
+    st.header("⚙️ Configuration")
     
     # Connection status
     st.subheader("🔌 Connection Status")
@@ -150,8 +248,7 @@ with st.sidebar:
         st.success("✅ Connected to API")
     else:
         st.error("❌ Cannot connect to API")
-        st.warning(f"**API URL**: `{get_api_url()}`")
-        st.info("**To fix:**\n1. Start the API server: `uvicorn main:app --reload`\n2. Verify the URL is correct\n3. Check if the server is running on the correct port")
+        st.info("**To fix:**\n1. Verify the API server is running\n2. Check server configuration\n3. Contact administrator if issue persists")
     
     st.divider()
     
@@ -174,6 +271,10 @@ with st.sidebar:
                 else:
                     st.session_state.upload_status = "error"
                     st.error(message)
+                    # If session expired, rerun to show login page
+                    if not st.session_state.is_authenticated:
+                        st.warning("Please login again.")
+                        st.rerun()
     
     st.divider()
     
@@ -219,7 +320,7 @@ if prompt := st.chat_input("Ask a question about the employee handbook..."):
     # Check API connection before processing
     if not check_api_connection():
         st.error("⚠️ **API Server Not Connected**")
-        st.warning(f"Cannot connect to API at `{get_api_url()}`. Please:\n1. Start the API server\n2. Verify the URL in the sidebar\n3. Check the connection status indicator")
+        st.warning("Cannot connect to API server. Please check the connection status in the sidebar or contact administrator.")
         st.stop()
     
     # Add user message to chat history
@@ -256,6 +357,11 @@ if prompt := st.chat_input("Ask a question about the employee handbook..."):
                 error_msg = f"❌ **Error**: {response}"
                 st.error(error_msg)
                 
+                # If session expired, rerun to show login page
+                if not st.session_state.is_authenticated:
+                    st.warning("Please login again.")
+                    st.rerun()
+                
                 # Provide specific troubleshooting based on error type
                 if "timed out" in response.lower():
                     st.warning("**Timeout Troubleshooting:**")
@@ -268,11 +374,11 @@ if prompt := st.chat_input("Ask a question about the employee handbook..."):
                     """)
                 elif "cannot connect" in response.lower() or "connection error" in response.lower():
                     st.warning("**Connection Troubleshooting:**")
-                    st.markdown(f"""
-                    - Verify the API server is running at: `{get_api_url()}`
-                    - Check the API URL in the sidebar
+                    st.markdown("""
+                    - Verify the API server is running
+                    - Check the connection status in the sidebar
                     - Make sure the server started without errors
-                    - Try accessing the API directly in your browser: `{get_api_url()}/`
+                    - Contact administrator if issue persists
                     """)
                 else:
                     st.info("💡 **General Tips**:\n- Make sure the API server is running\n- Check if the handbook has been uploaded and processed\n- Verify your connection settings\n- Check server logs for detailed error messages")
