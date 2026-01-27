@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: QDRANT_URL
         sync: false
@@ -36,7 +36,7 @@ services:
     region: oregon
     plan: free
     buildCommand: pip install -r frontend/requirements.txt
-    startCommand: cd frontend && streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    startCommand: streamlit run frontend/app.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
     envVars:
       - key: API_BASE_URL
         fromService:
