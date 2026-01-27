@@ -12,7 +12,7 @@ Key concepts:
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import Mock, patch, AsyncMock
-from main import app
+from backend.main import app
 
 # Create a test client - this simulates making HTTP requests to our API
 client = TestClient(app)
@@ -85,9 +85,9 @@ class TestHealthEndpoint:
 class TestUploadHandbookEndpoint:
     """Test cases for the upload handbook endpoint"""
 
-    @patch("services.handbook_services.pdf_loader")
-    @patch("services.handbook_services.chunk_text") 
-    @patch("services.handbook_services.add_vectors")
+    @patch("backend.services.handbook_services.pdf_loader")
+    @patch("backend.services.handbook_services.chunk_text") 
+    @patch("backend.services.handbook_services.add_vectors")
     def test_upload_handbook_success(self,mock_load,mock_chunk,mock_add,client):
         """
         Test successful PDF upload
@@ -137,7 +137,7 @@ class TestUploadHandbookEndpoint:
 class TestChatEndpoint:
     """Test cases for the chat endpoint"""
     
-    @patch("routes.handbook_routes.get_result")
+    @patch("backend.routes.handbook_backend.routes.get_result")
     def test_chat_endpoint_success(self,mock_get_result,client):
         """
         Test successful chat query

@@ -1,9 +1,9 @@
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from qdrant_client.models import Filter, FieldCondition, MatchValue
-from config.qdrant import client,COLLECTION_NAME as collection_handbook
-from utils.embeddings import get_embedding
-from utils.llm_setup import set_llm
+from backend.config.qdrant import client,COLLECTION_NAME as collection_handbook
+from backend.utils.embeddings import get_embedding
+from backend.utils.llm_setup import set_llm
 import logging
 
 logger=logging.getLogger(__name__)
@@ -21,7 +21,7 @@ Strictly allowed metadata fields and values:
 -employee_type: Full-Time, Part-Time, Contractor, Intern, General
 
 Rules:
-- Do NOT add any text except the JSON Output
+- Do NOT add any text except the JSON Output.
 - Each of the 4 metadata fields MUST be present
 - If a field is not explicitly mentioned, set it to "General"
 - Return ONLY valid JSON with exactly 4 key:value pairs

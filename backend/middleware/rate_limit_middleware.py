@@ -6,8 +6,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 from fastapi import HTTPException, status
-from config.rate_limit_config import get_ip_rate_limit_config
-from utils.rate_limiter import get_rate_limiter
+from backend.config.rate_limit_config import get_ip_rate_limit_config
+from backend.utils.rate_limiter import get_rate_limiter
 import logging
 
 logger = logging.getLogger(__name__)

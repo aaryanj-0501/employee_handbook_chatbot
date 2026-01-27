@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from utils.llm_setup import set_llm 
+from backend.utils.llm_setup import set_llm 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 

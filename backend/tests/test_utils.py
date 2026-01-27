@@ -1,14 +1,14 @@
 import time
-from utils.rate_limiter import get_rate_limiter
-from utils.pdf_loader import load_pdf
-from utils.chunker import chunk_text,clean_text
-from utils.embeddings import get_embedding
-from utils.llm_setup import set_llm
+from backend.utils.rate_limiter import get_rate_limiter
+from backend.utils.pdf_loader import load_pdf
+from backend.utils.chunker import chunk_text,clean_text
+from backend.utils.embeddings import get_embedding
+from backend.utils.llm_setup import set_llm
 import pytest
 from fastapi import status,FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
-from middleware.rate_limit_middleware import RateLimitMiddleware
+from backend.middleware.rate_limit_middleware import RateLimitMiddleware
 
 class TestPdfLoader:
     def test_pdf_loader_success(self,sample_pdf_path):
@@ -84,7 +84,7 @@ class TestChunker:
         assert cleaned is None
 
 class TestEmbeddings:
-    @patch("utils.embeddings.embedding_model")
+    @patch("backend.utils.embeddings.embedding_model")
     def test_get_embedding_success(self,mock_emb,sample_query_data):
         # ARRANGE
         query = sample_query_data["question"]
@@ -99,7 +99,7 @@ class TestEmbeddings:
         assert embedding == fake_vec
         mock_emb.embed_query.assert_called_once_with(query)
     
-    @patch("utils.embeddings.embedding_model")
+    @patch("backend.utils.embeddings.embedding_model")
     def test_get_embedding_failure(self,mock_emb):
         """If the query is none an error should be raised"""
         mock_emb.embed_query.side_effect=TypeError("Text must be str")

@@ -1,5 +1,5 @@
-from config.qdrant import client,COLLECTION_NAME
-from config.logging_config import setup_logging
+from backend.config.qdrant import client,COLLECTION_NAME
+from backend.config.logging_config import setup_logging
 import os
 from unittest.mock import MagicMock, patch
 import logging

@@ -2,13 +2,12 @@ import logging
 from unittest.mock import patch, MagicMock
 from starlette.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
-from main import app
-
+from backend.main import app
 
 class TestAppLifespan:
 
-    @patch("main.setup_logging")
-    @patch("main.logging.getLogger")
+    @patch("backend.main.setup_logging")
+    @patch("backend.main.logging.getLogger")
     def test_app_lifespan_startup_and_shutdown(
         self,
         mock_get_logger,

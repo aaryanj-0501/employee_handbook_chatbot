@@ -3,9 +3,9 @@ from typing import Any, Dict
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 
-from auth.jwt_handler import verify_access_token
-from config.rate_limit_config import get_rate_limit_config
-from utils.rate_limiter import get_rate_limiter
+from backend.auth.jwt_handler import verify_access_token
+from backend.config.rate_limit_config import get_rate_limit_config
+from backend.utils.rate_limiter import get_rate_limiter
 
 
 # OAuth2PasswordBearer extracts "Authorization: Bearer <token>"

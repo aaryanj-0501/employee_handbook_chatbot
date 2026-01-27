@@ -1,7 +1,7 @@
 from fastapi import APIRouter,UploadFile,File,BackgroundTasks,HTTPException,status,Depends
-from services.handbook_services import process_handbook,get_result
-from auth.dependencies import get_current_user,rate_limit_user
-from models.handbook_model import HandbookQuery  
+from backend.services.handbook_services import process_handbook,get_result
+from backend.auth.dependencies import rate_limit_user
+from backend.models.handbook_model import HandbookQuery  
 import logging
 
 logger = logging.getLogger(__name__)

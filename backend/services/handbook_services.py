@@ -2,13 +2,13 @@ import os
 import uuid
 from dotenv import load_dotenv
 from fastapi import HTTPException,status
-from config.qdrant import client
-from utils.embeddings import get_embedding
-from utils.chunker import clean_text,chunk_text
-from utils import pdf_loader
-from services.query_retriever import get_query_retriever
-from services.generate_metadata import infer_policy_type,infer_section,infer_location,infer_employee_type
-from services.final_result import extract_context,clean_output,answer_chain
+from backend.config.qdrant import client
+from backend.utils.embeddings import get_embedding
+from backend.utils.chunker import clean_text,chunk_text
+from backend.utils import pdf_loader
+from backend.services.query_retriever import get_query_retriever
+from backend.services.generate_metadata import infer_policy_type,infer_section,infer_location,infer_employee_type
+from backend.services.final_result import extract_context,clean_output,answer_chain
 import logging
 
 logger=logging.getLogger(__name__)
@@ -57,7 +57,7 @@ async def get_result(query:str,limit:int=5):
         logger.info(f"Processing query with limit {limit}")
         query_result=get_query_retriever(query,limit)
 
-        logger.info("Retrieved Query")
+        logger.info("Retrieved Querybackend.")
         if not query_result or not query_result.get('results'):
             logger.warning(f"No result found")
             return{

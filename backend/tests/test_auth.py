@@ -2,9 +2,9 @@ from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from auth.jwt_handler import create_access_token,verify_access_token
-from auth.dependencies import get_current_user
-from main import app
+from backend.auth.jwt_handler import create_access_token,verify_access_token
+from backend.auth.dependencies import get_current_user
+from backend.main import app
 
 class TestAuth:
     def test_login_success(self):

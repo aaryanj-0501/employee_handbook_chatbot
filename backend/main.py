@@ -1,11 +1,11 @@
 import os
 from fastapi import FastAPI
-from routes.handbook_routes import router
-from routes.auth_routes import router as auth_router
+from backend.routes.handbook_routes import router
+from backend.routes.auth_routes import router as auth_router
 from starlette.middleware.cors import CORSMiddleware
-from middleware.rate_limit_middleware import RateLimitMiddleware
+from backend.middleware.rate_limit_middleware import RateLimitMiddleware
 import logging
-from config.logging_config import setup_logging
+from backend.config.logging_config import setup_logging
 from contextlib import asynccontextmanager
 
 @asynccontextmanager

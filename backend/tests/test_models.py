@@ -5,7 +5,7 @@ This is the simplest test file - perfect for beginners!
 It tests data models (the structure of our data).
 """
 import pytest
-from models.handbook_model import HandbookQuery
+from backend.models.handbook_model import HandbookQuery
 from pydantic import ValidationError
 
 
