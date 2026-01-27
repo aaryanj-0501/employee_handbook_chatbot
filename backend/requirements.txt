@@ -1,4 +1,4 @@
-# --- API framework ---
+# ---------------- API ----------------
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
@@ -7,19 +7,19 @@ requests==2.31.0
 python-dotenv==1.0.0
 python-jose[cryptography]==3.3.0
 
-# --- Vector database ---
+# -------------- Vector DB --------------
 qdrant-client>=1.16,<2.0
 
-# --- PDF processing ---
+# ---------------- PDF ----------------
 pymupdf==1.23.8
 
-# --- LangChain (aligned to 0.2.x ecosystem) ---
+# -------- LangChain (aligned 0.2.x) --------
 langchain==0.2.1
 langchain-core==0.2.38
 langchain-community==0.2.1
 langchain-text-splitters==0.2.0
-langchain-huggingface==0.1.2
 langchain-ollama==0.1.2
+langchain-huggingface==0.0.1
 
-# --- Embeddings ---
+# ------------- Embeddings -------------
 sentence-transformers>=2.6.0,<3.0
