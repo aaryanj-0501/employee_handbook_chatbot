@@ -9,8 +9,6 @@ sys.path.insert(0, str(project_root))
 
 if __name__ == "__main__":
     try:
-        # Import the app directly to catch any import errors
-        from backend.main import app
         
         # Render's default PORT is 10000, use environment variable if set
         port = int(os.getenv("PORT", 10000))
@@ -21,7 +19,7 @@ if __name__ == "__main__":
         
         # Start uvicorn server - this will bind to the port and start listening
         uvicorn.run(
-            app,
+            "backend.main:app",
             host=host,
             port=port,
             log_level="info",
