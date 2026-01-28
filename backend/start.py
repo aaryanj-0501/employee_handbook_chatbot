@@ -12,16 +12,22 @@ if __name__ == "__main__":
         # Import the app directly to catch any import errors
         from backend.main import app
         
-        port = int(os.getenv("PORT", 8000))
-        print(f"Starting server on port {port}", flush=True)
-        print(f"Host: 0.0.0.0", flush=True)
+        # Render's default PORT is 10000, use environment variable if set
+        port = int(os.getenv("PORT", 10000))
+        host = "0.0.0.0"
         
+        print(f"Starting server on {host}:{port}", flush=True)
+        print(f"PORT environment variable: {os.getenv('PORT', 'not set (using default 10000)')}", flush=True)
+        
+        # Start uvicorn server - this will bind to the port and start listening
         uvicorn.run(
             app,
-            host="0.0.0.0",
+            host=host,
             port=port,
-            log_level="info"
+            log_level="info",
+            access_log=True
         )
+        
     except Exception as e:
         print(f"Error starting server: {e}", flush=True)
         import traceback
