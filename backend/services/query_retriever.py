@@ -86,6 +86,16 @@ def extract_metadata(query:str):
         logger.info("Extracted Metadata: %s",response)
         return response
     except Exception as e:
+        error_msg = str(e).lower()
+        if "unauthorized" in error_msg or "401" in error_msg:
+            logger.error(f"Ollama API authentication failed: {e}. Check OLLAMA_API_KEY environment variable.")
+            # Return default metadata when auth fails - this allows the app to still work
+            return {
+                "policy_type": "General",
+                "section": "General",
+                "location": "General",
+                "employee_type": "General"
+            }
         logger.error(f"Error extracting metadata: {e}")
         raise
 

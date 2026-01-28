@@ -122,5 +122,9 @@ def answer_chain_invoke(context, question):
         chain = get_answer_chain()
         return chain.invoke({"context": context, "question": question})
     except Exception as e:
+        error_msg = str(e).lower()
+        if "unauthorized" in error_msg or "401" in error_msg:
+            logger.error(f"Ollama API authentication failed: {e}. Check OLLAMA_API_KEY environment variable.")
+            return "According to the employee handbook, the service is temporarily unavailable. Please try again later or contact support."
         logger.error(f"Error generating answer: {e}")
         raise
