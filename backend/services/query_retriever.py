@@ -65,13 +65,29 @@ Answer:
     )
 ])
 
-llm=set_llm("query")
-query_chain=prompt | llm | JsonOutputParser()
+_query_chain = None
+
+def get_query_chain():
+    """Lazy-load the query chain to prevent startup failures."""
+    global _query_chain
+    if _query_chain is None:
+        try:
+            llm = set_llm("query")
+            _query_chain = prompt | llm | JsonOutputParser()
+        except Exception as e:
+            logger.error(f"Failed to initialize query chain: {e}")
+            raise
+    return _query_chain
 
 def extract_metadata(query:str):
-    response=query_chain.invoke({"query":query})
-    logger.info("Extracted Metadata: %s",response)
-    return response
+    try:
+        chain = get_query_chain()
+        response = chain.invoke({"query":query})
+        logger.info("Extracted Metadata: %s",response)
+        return response
+    except Exception as e:
+        logger.error(f"Error extracting metadata: {e}")
+        raise
 
 def build_filter(metadata:dict):
     if not metadata:

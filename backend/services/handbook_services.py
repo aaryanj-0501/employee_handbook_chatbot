@@ -8,7 +8,7 @@ from backend.utils.chunker import clean_text,chunk_text
 from backend.utils import pdf_loader
 from backend.services.query_retriever import get_query_retriever
 from backend.services.generate_metadata import infer_policy_type,infer_section,infer_location,infer_employee_type
-from backend.services.final_result import extract_context,clean_output,answer_chain
+from backend.services.final_result import extract_context,clean_output,answer_chain_invoke
 import logging
 
 logger=logging.getLogger(__name__)
@@ -57,7 +57,7 @@ async def get_result(query:str,limit:int=5):
         logger.info(f"Processing query with limit {limit}")
         query_result=get_query_retriever(query,limit)
 
-        logger.info("Retrieved Querybackend.")
+        logger.info("Retrieved Query.")
         if not query_result or not query_result.get('results'):
             logger.warning(f"No result found")
             return{
@@ -74,10 +74,10 @@ async def get_result(query:str,limit:int=5):
             }
         
         logger.info("Generating answer using LLM chain")
-        response = answer_chain.invoke({
-            "question": query,
-            "context": context
-        })
+        response = answer_chain_invoke(
+            context=context,
+            question=query
+        )
         return clean_output(response)
     except HTTPException:
         raise

@@ -1,7 +1,9 @@
 from langchain_ollama import ChatOllama
 import os
 from dotenv import load_dotenv
+import logging
 
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 QUERY_MODEL = os.getenv("CHAT_MODEL_NAME")
@@ -19,32 +21,41 @@ def set_llm(type: str):
     Returns:
         ChatOllama instance configured for cloud or local Ollama
     """
-    # Determine which model to use
-    model_name = ANSWER_MODEL if type == "answer" else QUERY_MODEL
-    
-    # Base configuration
-    llm_config = {
-        "model": model_name,
-        "temperature": 0,
-        "base_url": OLLAMA_BASE_URL,
-    }
-    
-    # Add API key authentication for cloud Ollama if provided
-    if OLLAMA_API_KEY:
+    try:
+        # Determine which model to use
+        model_name = ANSWER_MODEL if type == "answer" else QUERY_MODEL
         
-        # Set the API key as an environment variable for the underlying HTTP client
-        os.environ["OLLAMA_API_KEY"] = OLLAMA_API_KEY
+        if not model_name:
+            logger.warning(f"Model name not configured for type '{type}'")
+            raise ValueError(f"Model not configured for type: {type}")
         
-        # Some ChatOllama versions support headers parameter directly
-        # Try adding headers if the version supports it
-        try:
-            llm_config["headers"] = {
-                "Authorization": f"Bearer {OLLAMA_API_KEY}"
-            }
-        except (TypeError, ValueError):
-            # If headers parameter is not supported, the API key in env var
-            # should be picked up by the underlying HTTP client
-            pass
-    
-    llm = ChatOllama(**llm_config)
-    return llm
+        # Base configuration
+        llm_config = {
+            "model": model_name,
+            "temperature": 0,
+            "base_url": OLLAMA_BASE_URL,
+        }
+        
+        # Add API key authentication for cloud Ollama if provided
+        if OLLAMA_API_KEY:
+            
+            # Set the API key as an environment variable for the underlying HTTP client
+            os.environ["OLLAMA_API_KEY"] = OLLAMA_API_KEY
+            
+            # Some ChatOllama versions support headers parameter directly
+            # Try adding headers if the version supports it
+            try:
+                llm_config["headers"] = {
+                    "Authorization": f"Bearer {OLLAMA_API_KEY}"
+                }
+            except (TypeError, ValueError):
+                # If headers parameter is not supported, the API key in env var
+                # should be picked up by the underlying HTTP client
+                pass
+        
+        llm = ChatOllama(**llm_config)
+        logger.info(f"Initialized LLM for type '{type}' with model '{model_name}'")
+        return llm
+    except Exception as e:
+        logger.error(f"Failed to initialize LLM for type '{type}': {e}")
+        raise

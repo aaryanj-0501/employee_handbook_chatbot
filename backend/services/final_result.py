@@ -2,8 +2,9 @@ from fastapi import HTTPException
 from backend.utils.llm_setup import set_llm 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+import logging
 
-llm=set_llm("answer")
+logger = logging.getLogger(__name__)
 
 rag_prompt = ChatPromptTemplate.from_messages([
 
@@ -80,7 +81,19 @@ Answer:
 """)
 ])
 
-answer_chain=rag_prompt | llm | StrOutputParser()
+_answer_chain = None
+
+def get_answer_chain():
+    """Lazy-load the answer chain to prevent startup failures."""
+    global _answer_chain
+    if _answer_chain is None:
+        try:
+            llm = set_llm("answer")
+            _answer_chain = rag_prompt | llm | StrOutputParser()
+        except Exception as e:
+            logger.error(f"Failed to initialize answer chain: {e}")
+            raise
+    return _answer_chain
 
 def extract_context(query_result):
     if not isinstance(query_result, dict) or "results" not in query_result:
@@ -102,3 +115,12 @@ def clean_output(text:str)->str:
             cleaned.append(line.strip())
     
     return cleaned
+
+def answer_chain_invoke(context, question):
+    """Wrapper to use the lazy-loaded answer chain."""
+    try:
+        chain = get_answer_chain()
+        return chain.invoke({"context": context, "question": question})
+    except Exception as e:
+        logger.error(f"Error generating answer: {e}")
+        raise
