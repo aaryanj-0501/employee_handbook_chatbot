@@ -41,6 +41,9 @@ def set_llm(type: str):
             # The ollama client uses the OLLAMA_API_KEY environment variable
             # Set it before creating the client
             os.environ["OLLAMA_API_KEY"] = OLLAMA_API_KEY
+            llm_config["headers"]={
+                "Authorization":f"Bearer {OLLAMA_API_KEY}"
+            }
             logger.info(f"Using Ollama API key for authentication")
         
         llm = ChatOllama(**llm_config)
